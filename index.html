@@ -1,285 +1,112 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <style>
-      html,
-      :root {
-        --sait: var(--discord-safe-area-inset-top, env(safe-area-inset-top));
-        --saib: var(--discord-safe-area-inset-bottom, env(safe-area-inset-bottom));
-        --sail: var(--discord-safe-area-inset-left, env(safe-area-inset-left));
-        --sair: var(--discord-safe-area-inset-right, env(safe-area-inset-right));
-      }
-      body {
-        margin: 0px;
-        background-color: #000000;
-        padding-top: var(--sait);
-        padding-bottom: var(--saib);
-        padding-left: var(--sail);
-        padding-right: var(--sair);
-        overflow: hidden;
-      }
-      canvas {
-        padding-top: var(--sait);
-        padding-bottom: var(--saib);
-        padding-left: var(--sail);
-        padding-right: var(--sair);
-        top: 0;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        margin: auto;
-        display: block;
-        position: absolute;
-      }
-    </style>
-    <meta charset="utf-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>netMaze</title>
-  </head>
-  <body style="text-align: center; border: 0; margin: 0;">
-    <canvas id="dissonity-canvas" width=1280 height=720 tabindex="-1" style="width: 100vw; height: 100vh; background: #000000"></canvas>
-    <script type="importmap">
-      {
-        "imports": {
-          "bridge": "./.proxy/Files/Scripts/rpc_bridge.js",
-          "web_bridge": "./Files/Scripts/rpc_bridge.js"
-        }
-      }
-    </script>
-    <script type="module">
-      async function handleLoading() {
+<html lang="en-us">
 
-        async function fileExists(url) {
-          const response = await fetch(url, { method: "HEAD" });
-          return response.ok;
-        }
-        
-        // Script paths
-        const officialPath = ".proxy/Files/Scripts/official_utils.js";
-        const webBridgePath = "Files/Scripts/rpc_bridge.js";
-        const bridgePath = ".proxy/Files/Scripts/rpc_bridge.js";
-        const webLoaderPath = "Files/Build/NetMaze-WGLT.loader.js";
-        const loaderPath = ".proxy/Files/Build/NetMaze-WGLT.loader.js";
-        const checkPath = ".proxy/discord.check.js";
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>netMaze</title>
+	<style>
+		html,
+		body {
+			background: #000;
+			width: 100%;
+			height: 100%;
+			overflow: visible;
+			padding: 0;
+			margin: 0;
+		}
 
-        const outsideDiscord = !(await fileExists(checkPath));
+		div#gameContainer {
+			background: transparent !important;
+			position: absolute;
+		}
 
-        // Outside Discord
-        if (outsideDiscord) {
+		div#gameContainer canvas {
+			position: absolute;
+		}
 
-          // Loader
-          const loader = document.createElement("script");
-          loader.setAttribute("src", webLoaderPath);
-          loader.setAttribute("type", "text/javascript");
-          
-          const loadPromise = new Promise(resolve => {
-            loader.addEventListener("load", resolve);
-          });
+		div#gameContainer canvas[data-pixel-art="true"] {
+			position: absolute;
+			image-rendering: optimizeSpeed;
+			image-rendering: -webkit-crisp-edges;
+			image-rendering: -moz-crisp-edges;
+			image-rendering: -o-crisp-edges;
+			image-rendering: crisp-edges;
+			image-rendering: -webkit-optimize-contrast;
+			image-rendering: optimize-contrast;
+			image-rendering: pixelated;
+			-ms-interpolation-mode: nearest-neighbor;
+		}
+	</style>
+</head>
 
-          // Closed RpcBridge
-          const bridge = document.createElement("script");
-          bridge.setAttribute("src", webBridgePath);
-          bridge.setAttribute("type", "module");
-          bridge.setAttribute("data-web", true);
+<body>
+	<div id="gameContainer">
+		<canvas id="unity-canvas" data-pixel-art=""></canvas>
+		<script src="Build/NetMaze-WGLT.loader.js"></script>
+		<script>
+			var canvas = document.querySelector("#unity-canvas");
+			var config = {
+				dataUrl: ".proxy/Build/NetMaze-WGLT.data",
+				frameworkUrl: ".proxy/Build/NetMaze-WGLT.framework.js",
+				codeUrl: ".proxy/Build/NetMaze-WGLT.wasm",
+				streamingAssetsUrl: ".proxy/StreamingAssets",
+				companyName: "NetWare Interactive",
+				productName: "netMaze",
+				productVersion: "1.0.0",
+			};
+			var scaleToFit;
+			try {
+				scaleToFit = !!JSON.parse("");
+			} catch (e) {
+				scaleToFit = true;
+			}
+			function progressHandler(progress) {
+				var percent = progress * 100 + '%';
+				canvas.style.background = 'linear-gradient(to right, white, white ' + percent + ', transparent ' + percent + ', transparent) no-repeat center';
+				canvas.style.backgroundSize = '100% 1rem';
+			}
+			function onResize() {
+				var container = canvas.parentElement;
+				var w;
+				var h;
 
-          document.head.appendChild(loader);
-          document.head.appendChild(bridge);
+				if (scaleToFit) {
+					w = window.innerWidth;
+					h = window.innerHeight;
 
-          await loadPromise;
-        }
+					var r = 720 / 1280;
 
-        // Discord client - load bridge
-        else {
+					if (w * r > window.innerHeight) {
+						w = Math.min(w, Math.ceil(h / r));
+					}
+					h = Math.floor(w * r);
+				} else {
+					w = 1280;
+					h = 720;
+				}
 
-          // Loader
-          const loader = document.createElement("script");
-          loader.setAttribute("src", loaderPath);
-          loader.setAttribute("type", "text/javascript");
+				container.style.width = canvas.style.width = w + "px";
+				container.style.height = canvas.style.height = h + "px";
+				container.style.top = Math.floor((window.innerHeight - h) / 2) + "px";
+				container.style.left = Math.floor((window.innerWidth - w) / 2) + "px";
+			}
+			createUnityInstance(canvas, config, progressHandler).then(function (instance) {
+				canvas = instance.Module.canvas;
+				onResize();
+			});
+			window.addEventListener('resize', onResize);
+			onResize();
 
-          const loadPromise = new Promise(resolve => {
-            loader.addEventListener("load", resolve);
-          });
+			if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+				// Mobile device style: fill the whole browser client area with the game canvas:
+				const meta = document.createElement('meta');
+				meta.name = 'viewport';
+				meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
+				document.getElementsByTagName('head')[0].appendChild(meta);
+			}
+		</script>
+	</div>
+</body>
 
-          // Utils
-          const officialUtils = document.createElement("script");
-          officialUtils.setAttribute("src", officialPath);
-          officialUtils.setAttribute("type", "module");
-
-          // RpcBridge
-          const bridge = document.createElement("script");
-          bridge.setAttribute("src", bridgePath);
-          bridge.setAttribute("type", "module");
-          bridge.setAttribute("data-web", false);
-
-          document.head.appendChild(loader);
-          document.head.appendChild(officialUtils);
-          document.head.appendChild(bridge);
-
-          await loadPromise;
-        }
-
-        // Unity - - - - -
-        var canvas = document.querySelector("#dissonity-canvas");
-
-        // Background
-        let background = "#000000";
-        if (background != "#000000") {
-          background = outsideDiscord
-            ? "url('" + background
-            : "url('.proxy/" + background;
-        }
-        canvas.style.background = background;
-
-        // Constants
-        const RESOLUTION_TYPE = {
-          Default: 1,
-          Viewport: 2,
-          Dynamic: 3
-        };
-
-        const PLATFORM_RUNTIME = {
-          Desktop: 1,
-          Mobile: 2,
-          Web: 3
-        };
-
-        // Resolution
-        function parseVariable(variable) {
-          const raw = variable.split("]]] ")[1].slice(0, -1);
-          return raw;
-        }
-
-        const defaultWidth = 1280;
-        const defaultHeight = 720;
-
-        let viewportWidth = "[[[ WIDTH ]]] 1100§";
-        let viewportHeight = "[[[ HEIGHT ]]] 525§";
-
-        let desktopResolution = "[[[ DESKTOP_RESOLUTION ]]] 2§";
-        let mobileResolution = "[[[ MOBILE_RESOLUTION ]]] 3§";
-        let webResolution = "[[[ WEB_RESOLUTION ]]] 3§";
-
-        let width;
-        let height;
-        let resolution;
-        let autoSize = false;
-
-        // Parse
-        viewportWidth = Number( parseVariable(viewportWidth) );
-        viewportHeight = Number( parseVariable(viewportHeight) );
-        desktopResolution = Number( parseVariable(desktopResolution) );
-        mobileResolution = Number( parseVariable(mobileResolution) );
-        webResolution = Number( parseVariable(webResolution) );
-
-        // Web
-        if (outsideDiscord) resolution = webResolution;
-
-        // Mobile
-        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-
-          if (!resolution) resolution = mobileResolution;
-
-          // Mobile device style: fill the whole browser client area with the game canvas:
-          var meta = document.createElement('meta');
-          meta.name = 'viewport';
-          meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
-          document.getElementsByTagName('head')[0].appendChild(meta);
-  
-          var canvas = document.querySelector("#dissonity-canvas");
-          canvas.style.width = "100%";
-          canvas.style.height = "100%";
-          canvas.style.position = "fixed";
-  
-          document.body.style.textAlign = "left";
-        }
-
-        else if (!resolution){
-          resolution = desktopResolution;
-        }
-
-        switch (resolution) {
-          case RESOLUTION_TYPE.Default: {
-            width = defaultWidth;
-            height = defaultHeight;
-            break;
-          }
-          case RESOLUTION_TYPE.Viewport: {
-            width = viewportWidth;
-            height = viewportHeight;
-            break;
-          }
-          case RESOLUTION_TYPE.Dynamic: {
-            autoSize = true;
-            break;
-          }
-        }
-
-        if (!autoSize) {
-
-          function keepRatio()
-          {
-            canvas.width = width;
-            canvas.height = height;
-            const aspectRatio = canvas.width / canvas.height;
-  
-            let newWidth = window.innerWidth;
-            let newHeight = window.innerHeight;
-  
-            if (newWidth / newHeight > aspectRatio) {
-              newWidth = newHeight * aspectRatio;
-            } else {
-              newHeight = newWidth / aspectRatio;
-            }
-  
-            canvas.style.width = `${newWidth}px`;
-            canvas.style.height = `${newHeight}px`;
-          }
-  
-          keepRatio();
-  
-          window.addEventListener("resize", () => {
-            keepRatio();
-          });
-        }
-
-        const dataUrl = outsideDiscord ? "Files/Build/NetMaze-WGLT.data" : ".proxy/Files/Build/NetMaze-WGLT.data";
-        const frameworkUrl = outsideDiscord ? "Files/Build/NetMaze-WGLT.framework.js" : ".proxy/Files/Build/NetMaze-WGLT.framework.js";
-        const workerUrl = outsideDiscord ? "Files/Build/" : ".proxy/Files/Build/";
-        const codeUrl = outsideDiscord ? "Files/Build/NetMaze-WGLT.wasm" : ".proxy/Files/Build/NetMaze-WGLT.wasm";
-        const memoryUrl = outsideDiscord ? "Files/Build/" : ".proxy/Files/Build/";
-        const symbolsUrl = outsideDiscord ? "Files/Build/" : ".proxy/Files/Build/";
-  
-        createUnityInstance(document.querySelector("#dissonity-canvas"), {
-          dataUrl,
-          frameworkUrl,
-          codeUrl,
-          streamingAssetsUrl: "StreamingAssets",
-          companyName: "NetWare Interactive",
-          productName: "netMaze",
-          productVersion: "1.0.0",
-          matchWebGLToCanvasSize: autoSize,
-          // devicePixelRatio: 1, // Uncomment this to override low DPI rendering on high DPI displays.
-        }).then(instance => {
-
-          if (outsideDiscord) {
-
-            import("web_bridge")
-            .then(module => {
-              module.SetUnityInstance(instance);
-            });
-          }
-
-          else {
-
-            import("bridge")
-            .then(module => {
-              module.SetUnityInstance(instance);
-            });
-          }
-        });
-      }
-
-      handleLoading();
-    </script>
-  </body>
 </html>
